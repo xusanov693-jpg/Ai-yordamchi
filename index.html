@@ -1,1 +1,151 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Pro Yordamchi — Bepul Sun'iy Intellekt</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; padding: 16px; }
+    .app { width: 100%; max-width: 520px; background: #1e293b; border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .title { font-size: 20px; font-weight: 700; color: #38bdf8; }
+    .badge { background: #0284c7; font-size: 12px; padding: 4px 10px; border-radius: 99px; font-weight: 600; }
+
+    /* REKLAMA BANNER JOYI */
+    .ad-box { background: #0f172a; border: 1px dashed #475569; border-radius: 12px; padding: 12px; text-align: center; font-size: 12px; color: #94a3b8; margin-bottom: 16px; }
+
+    .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .mode-btn { background: #334155; color: #e2e8f0; border: 2px solid transparent; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; }
+    .mode-btn.active { border-color: #38bdf8; background: #0f172a; color: #38bdf8; }
+
+    textarea { width: 100%; height: 100px; background: #0f172a; border: 1px solid #334155; border-radius: 14px; color: #fff; padding: 12px; font-size: 15px; resize: none; outline: none; }
+    textarea:focus { border-color: #38bdf8; }
+
+    .send-btn { width: 100%; margin-top: 12px; background: linear-gradient(135deg, #0284c7, #2563eb); color: white; border: none; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; }
+    .send-btn:disabled { opacity: 0.6; }
+
+    .result-box { margin-top: 16px; background: #0f172a; border-radius: 14px; padding: 14px; font-size: 15px; line-height: 1.55; white-space: pre-wrap; display: none; border: 1px solid #334155; }
+    .copy-btn { margin-top: 10px; background: #334155; color: #38bdf8; border: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: none; }
+
+    /* VIP / OBUNA TUGMASI */
+    .vip-box { margin-top: 18px; background: linear-gradient(135deg, #1e1b4b, #312e81); padding: 14px; border-radius: 14px; text-align: center; border: 1px solid #4f46e5; }
+    .vip-btn { display: inline-block; margin-top: 8px; background: #f59e0b; color: #000; text-decoration: none; padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="title">⚡ AI Pro Yordamchi</div>
+      <div class="badge" id="limitBadge">Bepul: 5/5</div>
+    </div>
+
+    <!-- YUQORI REKLAMA JOYI -->
+    <div class="ad-box" id="ad-top">
+      📢 Reklama joyi (Bu yerga Adsterra/Monetag banner kodi qo'yiladi)
+    </div>
+
+    <div class="modes">
+      <button class="mode-btn active" onclick="setMode('smm', this)">📱 SMM Post & Ssenariy</button>
+      <button class="mode-btn" onclick="setMode('resume', this)">📄 Rezyume (CV)</button>
+      <button class="mode-btn" onclick="setMode('business', this)">💼 Biznes G'oya</button>
+      <button class="mode-btn" onclick="setMode('chat', this)">💬 Erkin Savol</button>
+    </div>
+
+    <textarea id="prompt" placeholder="Mavzuni yozing... Masalan: Telefon sotish do'koni uchun Instagram post yozib ber"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="askAI()">✨ AI Javobini Olish</button>
+
+    <div class="result-box" id="result"></div>
+    <button class="copy-btn" id="copyBtn" onclick="copyText()">📋 Javobni nusxalash</button>
+
+    <!-- PASTKI REKLAMA JOYI -->
+    <div class="ad-box" style="margin-top: 16px;" id="ad-bottom">
+      📢 Hamkorlik / Reklama bloki
+    </div>
+
+    <div class="vip-box">
+      <div style="font-size: 14px; font-weight: 600;">👑 Cheksiz VIP rejim va reklamasiz foydalanish</div>
+      <a href="https://t.me/" target="_blank" class="vip-btn">VIP Obuna olish →</a>
+    </div>
+  </div>
+
+  <script>
+    let currentMode = 'smm';
+    const MAX_FREE = 5;
+
+    function getRemaining() {
+      const today = new Date().toDateString();
+      const savedDate = localStorage.getItem('ai_date');
+      let used = parseInt(localStorage.getItem('ai_used') || '0');
+      if (savedDate !== today) {
+        localStorage.setItem('ai_date', today);
+        localStorage.setItem('ai_used', '0');
+        used = 0;
+      }
+      return Math.max(0, MAX_FREE - used);
+    }
+
+    function updateBadge() {
+      document.getElementById('limitBadge').innerText = `Bepul: ${getRemaining()}/${MAX_FREE}`;
+    }
+    updateBadge();
+
+    function setMode(mode, btn) {
+      currentMode = mode;
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    async function askAI() {
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!prompt) return alert("Iltimos, avval savol yoki mavzu yozing!");
+
+      if (getRemaining() <= 0) {
+        return alert("Bugungi 5 ta bepul limit tugadi! Cheksiz foydalanish uchun VIP obuna oling yoki ertaga kiring.");
+      }
+
+      const btn = document.getElementById('sendBtn');
+      const resultBox = document.getElementById('result');
+      const copyBtn = document.getElementById('copyBtn');
+
+      btn.disabled = true;
+      btn.innerText = "⏳ AI o'ylamoqda...";
+      resultBox.style.display = "none";
+      copyBtn.style.display = "none";
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, mode: currentMode })
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          resultBox.innerText = "Xatolik: " + data.error;
+        } else {
+          resultBox.innerText = data.reply;
+          const used = parseInt(localStorage.getItem('ai_used') || '0') + 1;
+          localStorage.setItem('ai_used', used.toString());
+          updateBadge();
+          copyBtn.style.display = "inline-block";
+        }
+        resultBox.style.display = "block";
+      } catch (e) {
+        resultBox.innerText = "Internet aloqasini tekshiring.";
+        resultBox.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "✨ AI Javobini Olish";
+      }
+    }
+
+    function copyText() {
+      const text = document.getElementById('result').innerText;
+      navigator.clipboard.writeText(text);
+      alert("Nusxalandi!");
+    }
+  </script>
+</body>
+</html>
 
